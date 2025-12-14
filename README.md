@@ -1,20 +1,33 @@
 # bunman
 
-> Bun-native process manager powered by systemd
+> A Bun-native manager for long-running services, tasks, and workers
 
-bunman is a PM2-style CLI that provides a developer-friendly experience for managing long-running Bun applications by generating and managing systemd services.
+**bunman** is a developer-friendly CLI that brings excellent DX to systemd-based process management. It's built exclusively for Bun and provides a clean interface for managing services, background jobs, and workers without reimplementing infrastructure.
+
+## What is bunman?
+
+**bunman** is:
+- ✅ A Bun-native manager for long-running services, tasks, and workers
+- ✅ A DX layer over systemd — not a reimplementation of infrastructure
+- ✅ Built for production deployments on Linux systems
+- ✅ Designed with first-class monorepo support
+
+**bunman is NOT**:
+- ❌ A package manager
+- ❌ A build tool
+- ❌ A PM2 clone or replacement
 
 ## Why bunman?
 
 | PM2 | bunman |
 |-----|-------|
-| JS daemon | OS-level systemd |
+| JavaScript daemon | OS-level systemd |
 | Node dependency | Bun-native |
 | Reimplements process management | Uses battle-tested systemd |
 | Fragile under load | Extremely reliable |
 | Weak monorepo support | First-class monorepo support |
 
-**bunman is not a PM2 replacement** — it's a Bun-native DX layer for systemd.
+**Philosophy**: Small surface area. Strong guarantees. Leave infrastructure to the OS.
 
 ## Installation
 
