@@ -15,7 +15,7 @@ export async function logsCommand(ctx: CommandContext): Promise<void> {
   if (!serviceName) {
     throw new CommandError(
       "Service name required",
-      "Usage: bunpm logs <service>"
+      "Usage: bunman logs <service>"
     );
   }
 
@@ -23,7 +23,7 @@ export async function logsCommand(ctx: CommandContext): Promise<void> {
   if (!ctx.config) {
     throw new CommandError(
       "Configuration not loaded",
-      'Run "bunpm init" to create a configuration file'
+      'Run "bunman init" to create a configuration file'
     );
   }
 

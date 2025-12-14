@@ -15,7 +15,7 @@ ${color.bold("USAGE")}
   ${NAME} ${color.cyan("<command>")} ${color.dim("[options]")}
 
 ${color.bold("COMMANDS")}
-  ${color.cyan("init")}              Create a new bunpm.config.ts file
+  ${color.cyan("init")}              Create a new bunman.config.ts file
   ${color.cyan("start")} <service>   Start a service
   ${color.cyan("stop")} <service>    Stop a service
   ${color.cyan("restart")} <service> Restart a service
@@ -47,7 +47,7 @@ ${color.bold("EXAMPLES")}
   ${NAME} status
 
 ${color.bold("DOCUMENTATION")}
-  ${color.dim("https://github.com/your-username/bunpm")}
+  ${color.dim("https://github.com/your-username/bunman")}
 `);
 }
 
@@ -60,74 +60,74 @@ export function printCommandHelp(command: string): void {
   switch (command) {
     case "init":
       console.log(`
-${color.bold("bunpm init")}
-Create a new bunpm.config.ts configuration file.
+${color.bold("bunman init")}
+Create a new bunman.config.ts configuration file.
 
 ${color.bold("USAGE")}
-  bunpm init ${color.dim("[options]")}
+  bunman init ${color.dim("[options]")}
 
 ${color.bold("OPTIONS")}
   ${color.dim("--minimal")}   Create minimal config (no comments)
   ${color.dim("--monorepo")}  Create monorepo-style config
 
 ${color.bold("EXAMPLES")}
-  bunpm init
-  bunpm init --minimal
-  bunpm init --monorepo
+  bunman init
+  bunman init --minimal
+  bunman init --monorepo
 `);
       break;
 
     case "start":
       console.log(`
-${color.bold("bunpm start <service>")}
-Start a service defined in bunpm.config.ts.
+${color.bold("bunman start <service>")}
+Start a service defined in bunman.config.ts.
 
 ${color.bold("USAGE")}
-  bunpm start <service>
+  bunman start <service>
 
 ${color.bold("DESCRIPTION")}
   Generates a systemd unit file for the service, reloads systemd,
   enables the service to start on boot, and starts it.
 
 ${color.bold("EXAMPLES")}
-  bunpm start api
-  bunpm start worker
+  bunman start api
+  bunman start worker
 `);
       break;
 
     case "stop":
       console.log(`
-${color.bold("bunpm stop <service>")}
+${color.bold("bunman stop <service>")}
 Stop a running service.
 
 ${color.bold("USAGE")}
-  bunpm stop <service>
+  bunman stop <service>
 
 ${color.bold("EXAMPLES")}
-  bunpm stop api
+  bunman stop api
 `);
       break;
 
     case "restart":
       console.log(`
-${color.bold("bunpm restart <service>")}
+${color.bold("bunman restart <service>")}
 Restart a service.
 
 ${color.bold("USAGE")}
-  bunpm restart <service>
+  bunman restart <service>
 
 ${color.bold("EXAMPLES")}
-  bunpm restart api
+  bunman restart api
 `);
       break;
 
     case "logs":
       console.log(`
-${color.bold("bunpm logs <service>")}
+${color.bold("bunman logs <service>")}
 View logs for a service from journalctl.
 
 ${color.bold("USAGE")}
-  bunpm logs <service> ${color.dim("[options]")}
+  bunman logs <service> ${color.dim("[options]")}
 
 ${color.bold("OPTIONS")}
   ${color.dim("-f, --follow")}     Follow log output (stream)
@@ -137,38 +137,38 @@ ${color.bold("OPTIONS")}
   ${color.dim("-r, --reverse")}    Show newest entries first
 
 ${color.bold("EXAMPLES")}
-  bunpm logs api
-  bunpm logs api -f
-  bunpm logs api -n 100
-  bunpm logs api --since "1 hour ago"
+  bunman logs api
+  bunman logs api -f
+  bunman logs api -n 100
+  bunman logs api --since "1 hour ago"
 `);
       break;
 
     case "status":
       console.log(`
-${color.bold("bunpm status")}
-Show status of all services defined in bunpm.config.ts.
+${color.bold("bunman status")}
+Show status of all services defined in bunman.config.ts.
 
 ${color.bold("USAGE")}
-  bunpm status ${color.dim("[service]")}
+  bunman status ${color.dim("[service]")}
 
 ${color.bold("DESCRIPTION")}
   Shows a table with service status, PID, memory usage, and uptime.
   Optionally specify a service name to show detailed status.
 
 ${color.bold("EXAMPLES")}
-  bunpm status
-  bunpm status api
+  bunman status
+  bunman status api
 `);
       break;
 
     case "remove":
       console.log(`
-${color.bold("bunpm remove <service>")}
+${color.bold("bunman remove <service>")}
 Remove a service (stop, disable, and delete unit file).
 
 ${color.bold("USAGE")}
-  bunpm remove <service> ${color.dim("[options]")}
+  bunman remove <service> ${color.dim("[options]")}
 
 ${color.bold("OPTIONS")}
   ${color.dim("-f, --force")}  Skip confirmation prompt
@@ -178,17 +178,17 @@ ${color.bold("DESCRIPTION")}
   and deletes the systemd unit file.
 
 ${color.bold("EXAMPLES")}
-  bunpm remove api --force
+  bunman remove api --force
 `);
       break;
 
     case "doctor":
       console.log(`
-${color.bold("bunpm doctor")}
+${color.bold("bunman doctor")}
 Check system requirements and diagnose issues.
 
 ${color.bold("USAGE")}
-  bunpm doctor
+  bunman doctor
 
 ${color.bold("DESCRIPTION")}
   Checks for:
@@ -203,11 +203,11 @@ ${color.bold("DESCRIPTION")}
 
     case "startall":
       console.log(`
-${color.bold("bunpm startall")}
-Start all services defined in bunpm.config.ts.
+${color.bold("bunman startall")}
+Start all services defined in bunman.config.ts.
 
 ${color.bold("USAGE")}
-  bunpm startall
+  bunman startall
 
 ${color.bold("DESCRIPTION")}
   Generates unit files, enables, and starts all services.
@@ -216,11 +216,11 @@ ${color.bold("DESCRIPTION")}
 
     case "stopall":
       console.log(`
-${color.bold("bunpm stopall")}
+${color.bold("bunman stopall")}
 Stop all running services.
 
 ${color.bold("USAGE")}
-  bunpm stopall
+  bunman stopall
 
 ${color.bold("DESCRIPTION")}
   Stops all services defined in the configuration.
@@ -230,11 +230,11 @@ ${color.bold("DESCRIPTION")}
 
     case "restartall":
       console.log(`
-${color.bold("bunpm restartall")}
+${color.bold("bunman restartall")}
 Restart all services.
 
 ${color.bold("USAGE")}
-  bunpm restartall
+  bunman restartall
 
 ${color.bold("DESCRIPTION")}
   Updates unit files and restarts all services.

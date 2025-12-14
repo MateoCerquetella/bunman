@@ -20,7 +20,7 @@ export async function startCommand(ctx: CommandContext): Promise<void> {
   if (!serviceName) {
     throw new CommandError(
       "Service name required",
-      "Usage: bunpm start <service>"
+      "Usage: bunman start <service>"
     );
   }
 
@@ -28,7 +28,7 @@ export async function startCommand(ctx: CommandContext): Promise<void> {
   if (!ctx.config) {
     throw new CommandError(
       "Configuration not loaded",
-      'Run "bunpm init" to create a configuration file'
+      'Run "bunman init" to create a configuration file'
     );
   }
 
@@ -115,10 +115,10 @@ export async function startCommand(ctx: CommandContext): Promise<void> {
     }
   } else if (status.state === "activating") {
     logger.warn(`Service ${serviceName} is starting...`);
-    logger.dim("  Check status with: bunpm status");
+    logger.dim("  Check status with: bunman status");
   } else {
     logger.warn(`Service ${serviceName} may not have started correctly`);
     logger.dim(`  State: ${status.state}`);
-    logger.dim("  Check logs with: bunpm logs " + serviceName);
+    logger.dim("  Check logs with: bunman logs " + serviceName);
   }
 }

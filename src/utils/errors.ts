@@ -1,21 +1,21 @@
 /**
- * Base error class for bunpm
+ * Base error class for bunman
  */
-export class BunpmError extends Error {
+export class BunmanError extends Error {
   constructor(
     message: string,
     public help?: string,
     public exitCode: number = 1
   ) {
     super(message);
-    this.name = "BunpmError";
+    this.name = "BunmanError";
   }
 }
 
 /**
  * Configuration-related errors
  */
-export class ConfigError extends BunpmError {
+export class ConfigError extends BunmanError {
   constructor(message: string, help?: string) {
     super(message, help, 1);
     this.name = "ConfigError";
@@ -25,7 +25,7 @@ export class ConfigError extends BunpmError {
 /**
  * Permission-related errors
  */
-export class PermissionError extends BunpmError {
+export class PermissionError extends BunmanError {
   constructor(operation: string) {
     super(
       `Permission denied for ${operation}`,
@@ -39,7 +39,7 @@ export class PermissionError extends BunpmError {
 /**
  * systemd-related errors
  */
-export class SystemdError extends BunpmError {
+export class SystemdError extends BunmanError {
   constructor(operation: string, serviceName: string, details?: string) {
     const message = `systemd ${operation} failed for ${serviceName}`;
     super(message, details, 1);
@@ -50,7 +50,7 @@ export class SystemdError extends BunpmError {
 /**
  * Service not found error
  */
-export class ServiceNotFoundError extends BunpmError {
+export class ServiceNotFoundError extends BunmanError {
   constructor(serviceName: string, availableServices: string[]) {
     const available =
       availableServices.length > 0
@@ -64,7 +64,7 @@ export class ServiceNotFoundError extends BunpmError {
 /**
  * Command validation error
  */
-export class CommandError extends BunpmError {
+export class CommandError extends BunmanError {
   constructor(message: string, usage?: string) {
     super(message, usage, 1);
     this.name = "CommandError";

@@ -1,6 +1,6 @@
 import { resolve, dirname } from "path";
 import type {
-  BunpmConfig,
+  BunmanConfig,
   NormalizedConfig,
   NormalizedAppConfig,
 } from "../../types/config";
@@ -13,7 +13,7 @@ import {
 } from "../../constants";
 
 /**
- * Load and normalize the bunpm configuration
+ * Load and normalize the bunman configuration
  */
 export async function loadConfig(
   cwd: string = process.cwd()
@@ -22,12 +22,12 @@ export async function loadConfig(
 
   if (!configPath) {
     throw new ConfigError(
-      "No bunpm.config.ts found",
-      'Run "bunpm init" to create a configuration file'
+      "No bunman.config.ts found",
+      'Run "bunman init" to create a configuration file'
     );
   }
 
-  let config: BunpmConfig;
+  let config: BunmanConfig;
 
   try {
     // Bun can directly import .ts files
@@ -81,7 +81,7 @@ async function findConfigFile(startDir: string): Promise<string | null> {
  * Normalize the config by resolving paths and applying defaults
  */
 function normalizeConfig(
-  config: BunpmConfig,
+  config: BunmanConfig,
   configPath: string,
   configDir: string
 ): NormalizedConfig {
@@ -104,7 +104,7 @@ function normalizeConfig(
       envFile: merged.envFile ? resolve(configDir, merged.envFile) : undefined,
       user: merged.user,
       group: merged.group,
-      description: merged.description ?? `bunpm service: ${name}`,
+      description: merged.description ?? `bunman service: ${name}`,
       restart: merged.restart ?? DEFAULT_SERVICE_CONFIG.restart,
       restartSec: merged.restartSec ?? DEFAULT_SERVICE_CONFIG.restartSec,
       after: merged.after ?? DEFAULT_SERVICE_CONFIG.after,

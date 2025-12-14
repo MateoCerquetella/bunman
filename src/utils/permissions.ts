@@ -45,7 +45,7 @@ export async function isWritable(path: string): Promise<boolean> {
   try {
     // Check if parent directory exists and is writable
     const parentDir = path.substring(0, path.lastIndexOf("/"));
-    const testFile = `${parentDir}/.bunpm-test-${Date.now()}`;
+    const testFile = `${parentDir}/.bunman-test-${Date.now()}`;
 
     await Bun.write(testFile, "");
     await Bun.file(testFile).delete();

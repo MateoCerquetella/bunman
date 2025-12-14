@@ -45,7 +45,7 @@ export function parseArgs(argv: string[]): ParsedArgs {
   if (!COMMANDS.includes(command)) {
     throw new CommandError(
       `Unknown command: ${command}`,
-      `Run "bunpm help" for available commands`
+      `Run "bunman help" for available commands`
     );
   }
 

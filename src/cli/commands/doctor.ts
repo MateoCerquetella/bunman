@@ -15,7 +15,7 @@ interface CheckResult {
  * Diagnose system requirements and issues
  */
 export async function doctorCommand(ctx: CommandContext): Promise<void> {
-  logger.bold("bunpm doctor");
+  logger.bold("bunman doctor");
   logger.dim("Checking system requirements...\n");
 
   const checks: CheckResult[] = [];
@@ -72,7 +72,7 @@ export async function doctorCommand(ctx: CommandContext): Promise<void> {
   } else if (hasWarnings) {
     logger.warn("All critical checks passed, but there are warnings.");
   } else {
-    logger.success("All checks passed! bunpm is ready to use.");
+    logger.success("All checks passed! bunman is ready to use.");
   }
 }
 
@@ -138,7 +138,7 @@ async function checkSystemd(): Promise<CheckResult> {
     name: "systemd",
     status: "error",
     message: "systemd not available",
-    help: "bunpm requires Linux with systemd",
+    help: "bunman requires Linux with systemd",
   };
 }
 
@@ -209,15 +209,15 @@ async function checkConfig(cwd: string): Promise<CheckResult> {
     return {
       name: "Configuration",
       status: "ok",
-      message: "bunpm.config.ts found",
+      message: "bunman.config.ts found",
     };
   }
 
   return {
     name: "Configuration",
     status: "warn",
-    message: "No bunpm.config.ts found",
-    help: 'Run "bunpm init" to create a configuration file',
+    message: "No bunman.config.ts found",
+    help: 'Run "bunman init" to create a configuration file',
   };
 }
 

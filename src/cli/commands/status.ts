@@ -13,7 +13,7 @@ export async function statusCommand(ctx: CommandContext): Promise<void> {
   if (!ctx.config) {
     throw new CommandError(
       "Configuration not loaded",
-      'Run "bunpm init" to create a configuration file'
+      'Run "bunman init" to create a configuration file'
     );
   }
 
@@ -56,7 +56,7 @@ export async function statusCommand(ctx: CommandContext): Promise<void> {
         return;
       }
       logger.warn("No services defined in config");
-      logger.dim('Add services to bunpm.config.ts and run "bunpm start <service>"');
+      logger.dim('Add services to bunman.config.ts and run "bunman start <service>"');
       return;
     }
 

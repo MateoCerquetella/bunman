@@ -1,12 +1,12 @@
-# bunpm
+# bunman
 
 > Bun-native process manager powered by systemd
 
-bunpm is a PM2-style CLI that provides a developer-friendly experience for managing long-running Bun applications by generating and managing systemd services.
+bunman is a PM2-style CLI that provides a developer-friendly experience for managing long-running Bun applications by generating and managing systemd services.
 
-## Why bunpm?
+## Why bunman?
 
-| PM2 | bunpm |
+| PM2 | bunman |
 |-----|-------|
 | JS daemon | OS-level systemd |
 | Node dependency | Bun-native |
@@ -14,38 +14,38 @@ bunpm is a PM2-style CLI that provides a developer-friendly experience for manag
 | Fragile under load | Extremely reliable |
 | Weak monorepo support | First-class monorepo support |
 
-**bunpm is not a PM2 replacement** — it's a Bun-native DX layer for systemd.
+**bunman is not a PM2 replacement** — it's a Bun-native DX layer for systemd.
 
 ## Installation
 
 ```bash
-bun add -g bunpm
+bun add -g bunman
 ```
 
 ## Quick Start
 
 ```bash
 # Initialize config
-bunpm init
+bunman init
 
-# Edit bunpm.config.ts to configure your services
+# Edit bunman.config.ts to configure your services
 
 # Start a service
-bunpm start api
+bunman start api
 
 # View logs
-bunpm logs api -f
+bunman logs api -f
 
 # Check status
-bunpm status
+bunman status
 
 # Stop a service
-bunpm stop api
+bunman stop api
 ```
 
 ## Configuration
 
-Create a `bunpm.config.ts` in your project root:
+Create a `bunman.config.ts` in your project root:
 
 ```typescript
 export default {
@@ -114,49 +114,49 @@ limits: {
 
 ## Commands
 
-### `bunpm init`
+### `bunman init`
 
 Create a new configuration file.
 
 ```bash
-bunpm init              # Default template with comments
-bunpm init --minimal    # Minimal template (no comments)
-bunpm init --monorepo   # Monorepo-style template
+bunman init              # Default template with comments
+bunman init --minimal    # Minimal template (no comments)
+bunman init --monorepo   # Monorepo-style template
 ```
 
-### `bunpm start <service>`
+### `bunman start <service>`
 
 Start a service. Generates systemd unit file, enables on boot, and starts.
 
 ```bash
-bunpm start api
+bunman start api
 ```
 
-### `bunpm stop <service>`
+### `bunman stop <service>`
 
 Stop a running service.
 
 ```bash
-bunpm stop api
+bunman stop api
 ```
 
-### `bunpm restart <service>`
+### `bunman restart <service>`
 
 Restart a service. Updates the systemd unit file if config changed.
 
 ```bash
-bunpm restart api
+bunman restart api
 ```
 
-### `bunpm logs <service>`
+### `bunman logs <service>`
 
 View service logs from journalctl.
 
 ```bash
-bunpm logs api          # Last 50 lines
-bunpm logs api -f       # Follow (stream) logs
-bunpm logs api -n 100   # Last 100 lines
-bunpm logs api --since "1 hour ago"
+bunman logs api          # Last 50 lines
+bunman logs api -f       # Follow (stream) logs
+bunman logs api -n 100   # Last 100 lines
+bunman logs api --since "1 hour ago"
 ```
 
 Options:
@@ -166,13 +166,13 @@ Options:
 - `--until <time>` — Show logs until timestamp
 - `-r, --reverse` — Reverse chronological order
 
-### `bunpm status`
+### `bunman status`
 
 Show status of all services.
 
 ```bash
-bunpm status        # All services
-bunpm status api    # Detailed status for one service
+bunman status        # All services
+bunman status api    # Detailed status for one service
 ```
 
 ## Requirements
@@ -183,20 +183,20 @@ bunpm status api    # Detailed status for one service
 
 ## How It Works
 
-1. bunpm reads your `bunpm.config.ts`
+1. bunman reads your `bunman.config.ts`
 2. Generates systemd unit files in `/etc/systemd/system/`
 3. Uses `systemctl` to enable and start services
 4. Uses `journalctl` for log viewing
 
-**No background daemon** — bunpm is just a CLI, systemd handles process management.
+**No background daemon** — bunman is just a CLI, systemd handles process management.
 
 ## Generated Unit File
 
-For each service, bunpm generates a unit file like:
+For each service, bunman generates a unit file like:
 
 ```ini
 [Unit]
-Description=bunpm service: api
+Description=bunman service: api
 After=network.target
 
 [Service]
@@ -233,7 +233,7 @@ Unit files go to `~/.config/systemd/user/` and are managed with `systemctl --use
 
 ## Monorepo Support
 
-bunpm is designed for monorepos. Each app in your config maps to one systemd service:
+bunman is designed for monorepos. Each app in your config maps to one systemd service:
 
 ```typescript
 export default {
@@ -251,7 +251,7 @@ export default {
 Typical workflow:
 ```bash
 bun run turbo run build
-bunpm restart api
+bunman restart api
 ```
 
 ## License

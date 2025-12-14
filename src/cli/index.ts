@@ -17,7 +17,7 @@ import {
   restartallCommand,
 } from "./commands";
 import { loadConfig } from "../core/config";
-import { BunpmError } from "../utils/errors";
+import { BunmanError } from "../utils/errors";
 import { logger } from "../utils/logger";
 import { isSystemdAvailable } from "../utils/permissions";
 
@@ -63,9 +63,9 @@ async function main(): Promise<void> {
     if (args.command !== "init") {
       const systemdAvailable = await isSystemdAvailable();
       if (!systemdAvailable) {
-        throw new BunpmError(
+        throw new BunmanError(
           "systemd is not available",
-          "bunpm requires systemd to manage services (Linux only)"
+          "bunman requires systemd to manage services (Linux only)"
         );
       }
     }
@@ -82,10 +82,10 @@ async function main(): Promise<void> {
         ctx.config = await loadConfig(ctx.cwd);
         ctx.configPath = ctx.config.configPath;
       } catch (error) {
-        if (error instanceof BunpmError) {
+        if (error instanceof BunmanError) {
           throw error;
         }
-        throw new BunpmError(
+        throw new BunmanError(
           "Failed to load configuration",
           error instanceof Error ? error.message : "Unknown error"
         );
@@ -139,7 +139,7 @@ async function main(): Promise<void> {
  * Handle errors gracefully
  */
 function handleError(error: unknown): void {
-  if (error instanceof BunpmError) {
+  if (error instanceof BunmanError) {
     logger.error(error.message);
     if (error.help) {
       logger.dim(`  ${error.help}`);

@@ -1,7 +1,7 @@
 /**
- * bunpm configuration file structure
+ * bunman configuration file structure
  */
-export interface BunpmConfig {
+export interface BunmanConfig {
   /** Application definitions */
   apps: Record<string, AppConfig>;
 
@@ -94,7 +94,7 @@ export interface SystemdSettings {
 /**
  * Validated and normalized config (after loading)
  */
-export interface NormalizedConfig extends BunpmConfig {
+export interface NormalizedConfig extends BunmanConfig {
   /** Absolute path to config file */
   configPath: string;
 

@@ -13,7 +13,7 @@ export async function stopCommand(ctx: CommandContext): Promise<void> {
   if (!serviceName) {
     throw new CommandError(
       "Service name required",
-      "Usage: bunpm stop <service>"
+      "Usage: bunman stop <service>"
     );
   }
 
@@ -21,7 +21,7 @@ export async function stopCommand(ctx: CommandContext): Promise<void> {
   if (!ctx.config) {
     throw new CommandError(
       "Configuration not loaded",
-      'Run "bunpm init" to create a configuration file'
+      'Run "bunman init" to create a configuration file'
     );
   }
 

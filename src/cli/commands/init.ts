@@ -1,7 +1,7 @@
 import { resolve } from "path";
 import type { CommandContext } from "../../types/cli";
 import { logger } from "../../utils/logger";
-import { BunpmError } from "../../utils/errors";
+import { BunmanError } from "../../utils/errors";
 import {
   CONFIG_TEMPLATE,
   CONFIG_TEMPLATE_MINIMAL,
@@ -10,16 +10,16 @@ import {
 import { getBooleanOption } from "../parser";
 
 /**
- * Initialize a new bunpm configuration file
+ * Initialize a new bunman configuration file
  */
 export async function initCommand(ctx: CommandContext): Promise<void> {
-  const configPath = resolve(ctx.cwd, "bunpm.config.ts");
+  const configPath = resolve(ctx.cwd, "bunman.config.ts");
   const file = Bun.file(configPath);
 
   // Check if config already exists
   if (await file.exists()) {
-    throw new BunpmError(
-      "bunpm.config.ts already exists",
+    throw new BunmanError(
+      "bunman.config.ts already exists",
       "Delete the existing file or edit it directly"
     );
   }
@@ -45,10 +45,10 @@ export async function initCommand(ctx: CommandContext): Promise<void> {
   // Write the config file
   await Bun.write(configPath, template);
 
-  logger.success(`Created bunpm.config.ts (${templateName} template)`);
+  logger.success(`Created bunman.config.ts (${templateName} template)`);
   logger.info("Edit the file to configure your services");
   logger.dim("");
   logger.dim("Next steps:");
-  logger.dim("  1. Edit bunpm.config.ts to define your services");
-  logger.dim("  2. Run 'bunpm start <service>' to start a service");
+  logger.dim("  1. Edit bunman.config.ts to define your services");
+  logger.dim("  2. Run 'bunman start <service>' to start a service");
 }

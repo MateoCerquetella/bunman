@@ -10,7 +10,7 @@ export async function stopallCommand(ctx: CommandContext): Promise<void> {
   if (!ctx.config) {
     throw new CommandError(
       "Configuration not loaded",
-      'Run "bunpm init" to create a configuration file'
+      'Run "bunman init" to create a configuration file'
     );
   }
 

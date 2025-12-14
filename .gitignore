@@ -31,3 +31,6 @@ coverage/
 
 # Debug
 *.tsbuildinfo
+
+# AI
+.claude

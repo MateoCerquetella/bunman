@@ -1,4 +1,4 @@
-import type { BunpmConfig, AppConfig, RestartPolicy } from "../../types/config";
+import type { BunmanConfig, AppConfig, RestartPolicy } from "../../types/config";
 import { ConfigError } from "../../utils/errors";
 
 const VALID_RESTART_POLICIES: RestartPolicy[] = [
@@ -9,9 +9,9 @@ const VALID_RESTART_POLICIES: RestartPolicy[] = [
 ];
 
 /**
- * Validate the bunpm configuration structure
+ * Validate the bunman configuration structure
  */
-export function validateConfig(config: unknown): asserts config is BunpmConfig {
+export function validateConfig(config: unknown): asserts config is BunmanConfig {
   if (!config || typeof config !== "object") {
     throw new ConfigError(
       "Invalid config: expected an object",
@@ -207,7 +207,7 @@ function validateSystemdSettings(settings: unknown): void {
   if ("prefix" in settingsObj && typeof settingsObj["prefix"] !== "string") {
     throw new ConfigError(
       "Invalid config: 'systemd.prefix' must be a string",
-      "Specify service name prefix (default: 'bunpm-')"
+      "Specify service name prefix (default: 'bunman-')"
     );
   }
 

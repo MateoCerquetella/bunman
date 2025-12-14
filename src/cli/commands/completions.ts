@@ -26,10 +26,10 @@ export async function completionsCommand(ctx: CommandContext): Promise<void> {
 }
 
 function generateBashCompletions(): string {
-  return `# bunpm bash completion
-# Add to ~/.bashrc: eval "$(bunpm completions bash)"
+  return `# bunman bash completion
+# Add to ~/.bashrc: eval "$(bunman completions bash)"
 
-_bunpm_completions() {
+_bunman_completions() {
     local cur prev commands services
     COMPREPLY=()
     cur="\${COMP_WORDS[COMP_CWORD]}"
@@ -38,14 +38,14 @@ _bunpm_completions() {
     commands="init start stop restart remove logs status startall stopall restartall doctor completions help version"
 
     case "\${prev}" in
-        bunpm)
+        bunman)
             COMPREPLY=( $(compgen -W "\${commands}" -- "\${cur}") )
             return 0
             ;;
         start|stop|restart|remove|logs)
             # Try to get service names from config
-            if [ -f "bunpm.config.ts" ]; then
-                services=$(grep -oP "^\\s+\\K[a-zA-Z0-9_-]+(?=:)" bunpm.config.ts 2>/dev/null | tr '\\n' ' ')
+            if [ -f "bunman.config.ts" ]; then
+                services=$(grep -oP "^\\s+\\K[a-zA-Z0-9_-]+(?=:)" bunman.config.ts 2>/dev/null | tr '\\n' ' ')
                 COMPREPLY=( $(compgen -W "\${services}" -- "\${cur}") )
             fi
             return 0
@@ -82,19 +82,19 @@ _bunpm_completions() {
     fi
 }
 
-complete -F _bunpm_completions bunpm
+complete -F _bunman_completions bunman
 `;
 }
 
 function generateZshCompletions(): string {
-  return `#compdef bunpm
-# bunpm zsh completion
-# Add to ~/.zshrc: eval "$(bunpm completions zsh)"
+  return `#compdef bunman
+# bunman zsh completion
+# Add to ~/.zshrc: eval "$(bunman completions zsh)"
 
-_bunpm() {
+_bunman() {
     local -a commands
     commands=(
-        'init:Create a new bunpm.config.ts file'
+        'init:Create a new bunman.config.ts file'
         'start:Start a service'
         'stop:Stop a service'
         'restart:Restart a service'
@@ -122,9 +122,9 @@ _bunpm() {
             case $words[2] in
                 start|stop|restart|remove|logs)
                     # Get service names from config
-                    if [[ -f "bunpm.config.ts" ]]; then
+                    if [[ -f "bunman.config.ts" ]]; then
                         local -a services
-                        services=(\${(f)"$(grep -oP '^\\s+\\K[a-zA-Z0-9_-]+(?=:)' bunpm.config.ts 2>/dev/null)"})
+                        services=(\${(f)"$(grep -oP '^\\s+\\K[a-zA-Z0-9_-]+(?=:)' bunman.config.ts 2>/dev/null)"})
                         _describe 'service' services
                     fi
                     ;;
@@ -160,64 +160,64 @@ _bunpm() {
     esac
 }
 
-compdef _bunpm bunpm
+compdef _bunman bunman
 `;
 }
 
 function generateFishCompletions(): string {
-  return `# bunpm fish completion
-# Save to ~/.config/fish/completions/bunpm.fish
+  return `# bunman fish completion
+# Save to ~/.config/fish/completions/bunman.fish
 
 # Disable file completion
-complete -c bunpm -f
+complete -c bunman -f
 
 # Commands
-complete -c bunpm -n "__fish_use_subcommand" -a "init" -d "Create a new bunpm.config.ts file"
-complete -c bunpm -n "__fish_use_subcommand" -a "start" -d "Start a service"
-complete -c bunpm -n "__fish_use_subcommand" -a "stop" -d "Stop a service"
-complete -c bunpm -n "__fish_use_subcommand" -a "restart" -d "Restart a service"
-complete -c bunpm -n "__fish_use_subcommand" -a "remove" -d "Remove a service"
-complete -c bunpm -n "__fish_use_subcommand" -a "logs" -d "View service logs"
-complete -c bunpm -n "__fish_use_subcommand" -a "status" -d "Show status of all services"
-complete -c bunpm -n "__fish_use_subcommand" -a "startall" -d "Start all services"
-complete -c bunpm -n "__fish_use_subcommand" -a "stopall" -d "Stop all services"
-complete -c bunpm -n "__fish_use_subcommand" -a "restartall" -d "Restart all services"
-complete -c bunpm -n "__fish_use_subcommand" -a "doctor" -d "Check system requirements"
-complete -c bunpm -n "__fish_use_subcommand" -a "completions" -d "Generate shell completions"
-complete -c bunpm -n "__fish_use_subcommand" -a "help" -d "Show help message"
-complete -c bunpm -n "__fish_use_subcommand" -a "version" -d "Show version number"
+complete -c bunman -n "__fish_use_subcommand" -a "init" -d "Create a new bunman.config.ts file"
+complete -c bunman -n "__fish_use_subcommand" -a "start" -d "Start a service"
+complete -c bunman -n "__fish_use_subcommand" -a "stop" -d "Stop a service"
+complete -c bunman -n "__fish_use_subcommand" -a "restart" -d "Restart a service"
+complete -c bunman -n "__fish_use_subcommand" -a "remove" -d "Remove a service"
+complete -c bunman -n "__fish_use_subcommand" -a "logs" -d "View service logs"
+complete -c bunman -n "__fish_use_subcommand" -a "status" -d "Show status of all services"
+complete -c bunman -n "__fish_use_subcommand" -a "startall" -d "Start all services"
+complete -c bunman -n "__fish_use_subcommand" -a "stopall" -d "Stop all services"
+complete -c bunman -n "__fish_use_subcommand" -a "restartall" -d "Restart all services"
+complete -c bunman -n "__fish_use_subcommand" -a "doctor" -d "Check system requirements"
+complete -c bunman -n "__fish_use_subcommand" -a "completions" -d "Generate shell completions"
+complete -c bunman -n "__fish_use_subcommand" -a "help" -d "Show help message"
+complete -c bunman -n "__fish_use_subcommand" -a "version" -d "Show version number"
 
 # Completions subcommand
-complete -c bunpm -n "__fish_seen_subcommand_from completions" -a "bash zsh fish"
+complete -c bunman -n "__fish_seen_subcommand_from completions" -a "bash zsh fish"
 
 # Options for init
-complete -c bunpm -n "__fish_seen_subcommand_from init" -l minimal -d "Create minimal config"
-complete -c bunpm -n "__fish_seen_subcommand_from init" -l monorepo -d "Create monorepo config"
+complete -c bunman -n "__fish_seen_subcommand_from init" -l minimal -d "Create minimal config"
+complete -c bunman -n "__fish_seen_subcommand_from init" -l monorepo -d "Create monorepo config"
 
 # Options for start/restart
-complete -c bunpm -n "__fish_seen_subcommand_from start restart" -l dry-run -d "Show what would be done"
-complete -c bunpm -n "__fish_seen_subcommand_from start restart" -l json -d "Output JSON"
+complete -c bunman -n "__fish_seen_subcommand_from start restart" -l dry-run -d "Show what would be done"
+complete -c bunman -n "__fish_seen_subcommand_from start restart" -l json -d "Output JSON"
 
 # Options for logs
-complete -c bunpm -n "__fish_seen_subcommand_from logs" -s f -l follow -d "Follow logs"
-complete -c bunpm -n "__fish_seen_subcommand_from logs" -s n -l lines -d "Number of lines" -r
-complete -c bunpm -n "__fish_seen_subcommand_from logs" -l since -d "Show logs since" -r
-complete -c bunpm -n "__fish_seen_subcommand_from logs" -l until -d "Show logs until" -r
-complete -c bunpm -n "__fish_seen_subcommand_from logs" -s r -l reverse -d "Reverse order"
+complete -c bunman -n "__fish_seen_subcommand_from logs" -s f -l follow -d "Follow logs"
+complete -c bunman -n "__fish_seen_subcommand_from logs" -s n -l lines -d "Number of lines" -r
+complete -c bunman -n "__fish_seen_subcommand_from logs" -l since -d "Show logs since" -r
+complete -c bunman -n "__fish_seen_subcommand_from logs" -l until -d "Show logs until" -r
+complete -c bunman -n "__fish_seen_subcommand_from logs" -s r -l reverse -d "Reverse order"
 
 # Options for status
-complete -c bunpm -n "__fish_seen_subcommand_from status" -l json -d "Output JSON"
+complete -c bunman -n "__fish_seen_subcommand_from status" -l json -d "Output JSON"
 
 # Options for remove
-complete -c bunpm -n "__fish_seen_subcommand_from remove" -s f -l force -d "Force removal"
+complete -c bunman -n "__fish_seen_subcommand_from remove" -s f -l force -d "Force removal"
 
 # Service name completions (dynamic)
-function __bunpm_services
-    if test -f bunpm.config.ts
-        grep -oP '^\\s+\\K[a-zA-Z0-9_-]+(?=:)' bunpm.config.ts 2>/dev/null
+function __bunman_services
+    if test -f bunman.config.ts
+        grep -oP '^\\s+\\K[a-zA-Z0-9_-]+(?=:)' bunman.config.ts 2>/dev/null
     end
 end
 
-complete -c bunpm -n "__fish_seen_subcommand_from start stop restart remove logs" -a "(__bunpm_services)"
+complete -c bunman -n "__fish_seen_subcommand_from start stop restart remove logs" -a "(__bunman_services)"
 `;
 }

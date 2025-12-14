@@ -1,9 +1,9 @@
 /**
- * Default config template for `bunpm init`
+ * Default config template for `bunman init`
  */
-export const CONFIG_TEMPLATE = `import type { BunpmConfig } from "bunpm";
+export const CONFIG_TEMPLATE = `import type { BunmanConfig } from "bunman";
 
-const config: BunpmConfig = {
+const config: BunmanConfig = {
   apps: {
     // Example API service
     api: {
@@ -34,7 +34,7 @@ const config: BunpmConfig = {
 
   // systemd settings
   // systemd: {
-  //   prefix: "bunpm-",
+  //   prefix: "bunman-",
   //   userMode: false,
   // },
 };
@@ -61,9 +61,9 @@ export const CONFIG_TEMPLATE_MINIMAL = `export default {
 /**
  * Monorepo config template
  */
-export const CONFIG_TEMPLATE_MONOREPO = `import type { BunpmConfig } from "bunpm";
+export const CONFIG_TEMPLATE_MONOREPO = `import type { BunmanConfig } from "bunman";
 
-const config: BunpmConfig = {
+const config: BunmanConfig = {
   apps: {
     api: {
       cwd: "apps/api",

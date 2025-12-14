@@ -18,7 +18,7 @@ export async function removeCommand(ctx: CommandContext): Promise<void> {
   if (!serviceName) {
     throw new CommandError(
       "Service name required",
-      "Usage: bunpm remove <service>"
+      "Usage: bunman remove <service>"
     );
   }
 
@@ -26,7 +26,7 @@ export async function removeCommand(ctx: CommandContext): Promise<void> {
   if (!ctx.config) {
     throw new CommandError(
       "Configuration not loaded",
-      'Run "bunpm init" to create a configuration file'
+      'Run "bunman init" to create a configuration file'
     );
   }
 
