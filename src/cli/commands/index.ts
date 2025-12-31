@@ -6,6 +6,3 @@ export { logsCommand } from "./logs";
 export { statusCommand } from "./status";
 export { removeCommand } from "./remove";
 export { doctorCommand } from "./doctor";
-export { startallCommand } from "./startall";
-export { stopallCommand } from "./stopall";
-export { restartallCommand } from "./restartall";

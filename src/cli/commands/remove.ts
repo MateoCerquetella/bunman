@@ -1,11 +1,7 @@
 import type { CommandContext } from "../../types/cli";
 import { logger } from "../../utils/logger";
 import { CommandError, ServiceNotFoundError } from "../../utils/errors";
-import {
-  SystemdController,
-  getUnitFilePath,
-  unitFileExists,
-} from "../../core/systemd";
+import { getServiceManager } from "../../core/backend";
 import { getBooleanOption } from "../parser";
 
 /**
@@ -40,21 +36,21 @@ export async function removeCommand(ctx: CommandContext): Promise<void> {
     );
   }
 
-  const userMode = ctx.config.systemd?.userMode ?? false;
-  const controller = new SystemdController(userMode);
+  const serviceManager = getServiceManager();
   const force = getBooleanOption(ctx.args.options, "force", "f");
 
-  // Check if unit file exists
-  const unitExists = await unitFileExists(app.serviceName, userMode);
+  // Check if service exists
+  const isActive = await serviceManager.isActive(app.serviceName);
+  const status = await serviceManager.getStatus(app.serviceName);
 
-  if (!unitExists) {
-    logger.warn(`Service ${serviceName} is not installed`);
-    return;
+  if (!isActive && status.state === "inactive") {
+    logger.warn(`Service ${serviceName} is not installed or already stopped`);
+    // Try to remove anyway in case the config file exists
   }
 
   // Confirm removal unless --force is used
   if (!force) {
-    logger.warn(`This will remove the systemd unit for ${serviceName}`);
+    logger.warn(`This will remove the service configuration for ${serviceName}`);
     logger.dim("  Use --force to skip this warning");
 
     // In a real implementation, we'd prompt for confirmation
@@ -65,36 +61,9 @@ export async function removeCommand(ctx: CommandContext): Promise<void> {
     );
   }
 
-  // Step 1: Stop the service if running
-  const isActive = await controller.isActive(app.serviceName);
-  if (isActive) {
-    logger.step(`Stopping ${app.serviceName}...`);
-    await controller.stop(app.serviceName);
-  }
-
-  // Step 2: Disable the service
-  const isEnabled = await controller.isEnabled(app.serviceName);
-  if (isEnabled) {
-    logger.step(`Disabling ${app.serviceName}...`);
-    await controller.disable(app.serviceName);
-  }
-
-  // Step 3: Delete the unit file
-  logger.step(`Removing unit file...`);
-  const unitPath = getUnitFilePath(app.serviceName, userMode);
-
-  try {
-    await Bun.file(unitPath).delete();
-  } catch (error) {
-    throw new CommandError(
-      `Failed to delete unit file: ${unitPath}`,
-      error instanceof Error ? error.message : "Unknown error"
-    );
-  }
-
-  // Step 4: Reload systemd daemon
-  logger.step("Reloading systemd daemon...");
-  await controller.daemonReload();
+  // Remove the service
+  logger.step(`Removing ${app.serviceName}...`);
+  await serviceManager.remove(app.serviceName);
 
   logger.success(`Service ${serviceName} removed`);
 }

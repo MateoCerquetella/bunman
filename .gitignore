@@ -28,6 +28,7 @@ logs/
 
 # Test coverage
 coverage/
+examples/
 
 # Debug
 *.tsbuildinfo

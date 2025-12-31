@@ -1,4 +1,4 @@
-import type { LogOptions } from "../../types/service";
+import type { LogOptions } from "../../types/backend";
 import { SystemdError } from "../../utils/errors";
 
 /**
@@ -10,7 +10,7 @@ export class SystemdLogger {
   /**
    * Get logs for a service
    */
-  async getLogs(serviceName: string, options: LogOptions = {}): Promise<void> {
+  async follow(serviceName: string, options: LogOptions = {}): Promise<void> {
     const args = this.buildArgs(serviceName, options);
 
     try {
@@ -115,32 +115,9 @@ export class SystemdLogger {
       args.push("-n", options.lines.toString());
     }
 
-    // Priority level
-    if (options.level) {
-      args.push("-p", options.level);
-    }
-
     // Time range - since
     if (options.since) {
-      const since =
-        typeof options.since === "string"
-          ? options.since
-          : options.since.toISOString();
-      args.push("--since", since);
-    }
-
-    // Time range - until
-    if (options.until) {
-      const until =
-        typeof options.until === "string"
-          ? options.until
-          : options.until.toISOString();
-      args.push("--until", until);
-    }
-
-    // Reverse order
-    if (options.reverse) {
-      args.push("-r");
+      args.push("--since", options.since);
     }
 
     // No pager

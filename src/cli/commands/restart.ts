@@ -1,27 +1,13 @@
 import type { CommandContext } from "../../types/cli";
 import { logger } from "../../utils/logger";
 import { CommandError, ServiceNotFoundError } from "../../utils/errors";
-import {
-  generateUnitFile,
-  SystemdController,
-  getUnitFilePath,
-  ensureUnitDirectory,
-  unitFileExists,
-} from "../../core/systemd";
+import { getServiceManager } from "../../core/backend";
 
 /**
- * Restart a service
+ * Restart one or more services
  */
 export async function restartCommand(ctx: CommandContext): Promise<void> {
-  // Validate service name argument
-  const serviceName = ctx.args.args[0];
-
-  if (!serviceName) {
-    throw new CommandError(
-      "Service name required",
-      "Usage: bunman restart <service>"
-    );
-  }
+  const serviceNames = ctx.args.args;
 
   // Config should be loaded by CLI entry
   if (!ctx.config) {
@@ -31,7 +17,20 @@ export async function restartCommand(ctx: CommandContext): Promise<void> {
     );
   }
 
-  // Find the app config
+  // If no service names provided, restart all services
+  if (serviceNames.length === 0) {
+    await restartAllServices(ctx);
+    return;
+  }
+
+  // If multiple service names provided, restart them all
+  if (serviceNames.length > 1) {
+    await restartMultipleServices(ctx, serviceNames);
+    return;
+  }
+
+  // Single service - use existing logic
+  const serviceName = serviceNames[0];
   const app = ctx.config.apps[serviceName];
 
   if (!app) {
@@ -41,43 +40,28 @@ export async function restartCommand(ctx: CommandContext): Promise<void> {
     );
   }
 
-  const userMode = ctx.config.systemd?.userMode ?? false;
-  const controller = new SystemdController(userMode);
+  const serviceManager = getServiceManager();
 
-  // Check if unit file exists
-  const unitExists = await unitFileExists(app.serviceName, userMode);
+  // Check if service is active
+  const isActive = await serviceManager.isActive(app.serviceName);
 
-  if (!unitExists) {
-    // Service hasn't been started yet, do a full start
+  if (!isActive) {
+    // Service hasn't been started yet, do a full install and start
     logger.info(`Service ${serviceName} not found, performing initial start...`);
-
-    // Generate unit file
-    logger.step(`Generating systemd unit for ${app.serviceName}...`);
-    const unitContent = generateUnitFile(app);
-    const unitPath = getUnitFilePath(app.serviceName, userMode);
-
-    await ensureUnitDirectory(userMode);
-    await Bun.write(unitPath, unitContent);
-
-    // Reload and enable
-    await controller.daemonReload();
-    await controller.enable(app.serviceName);
+    logger.step(`Installing ${app.serviceName}...`);
+    await serviceManager.install(app.serviceName, app);
   } else {
-    // Regenerate unit file in case config changed
-    logger.step(`Updating systemd unit for ${app.serviceName}...`);
-    const unitContent = generateUnitFile(app);
-    const unitPath = getUnitFilePath(app.serviceName, userMode);
-
-    await Bun.write(unitPath, unitContent);
-    await controller.daemonReload();
+    // Service exists, reinstall to pick up config changes and restart
+    logger.step(`Updating ${app.serviceName}...`);
+    await serviceManager.install(app.serviceName, app);
+    
+    // Restart the service
+    logger.step(`Restarting ${app.serviceName}...`);
+    await serviceManager.restart(app.serviceName);
   }
 
-  // Restart the service
-  logger.step(`Restarting ${app.serviceName}...`);
-  await controller.restart(app.serviceName);
-
   // Verify service restarted
-  const status = await controller.getStatus(app.serviceName);
+  const status = await serviceManager.getStatus(app.serviceName);
 
   if (status.state === "active") {
     logger.success(`Service ${serviceName} restarted`);
@@ -91,5 +75,116 @@ export async function restartCommand(ctx: CommandContext): Promise<void> {
     logger.warn(`Service ${serviceName} may not have restarted correctly`);
     logger.dim(`  State: ${status.state}`);
     logger.dim("  Check logs with: bunman logs " + serviceName);
+  }
+}
+
+/**
+ * Restart all services
+ */
+async function restartAllServices(ctx: CommandContext): Promise<void> {
+  const apps = Object.entries(ctx.config!.apps);
+
+  if (apps.length === 0) {
+    logger.warn("No services defined in config");
+    return;
+  }
+
+  const serviceManager = getServiceManager();
+
+  logger.info(`Restarting ${apps.length} service(s)...`);
+  console.log("");
+
+  let successCount = 0;
+  let failCount = 0;
+
+  for (const [name, app] of apps) {
+    try {
+      logger.step(`Restarting ${name}...`);
+
+      // Reinstall to pick up config changes
+      await serviceManager.install(app.serviceName, app);
+
+      // Restart the service
+      await serviceManager.restart(app.serviceName);
+
+      // Verify
+      const status = await serviceManager.getStatus(app.serviceName);
+
+      if (status.state === "active" || status.state === "activating") {
+        logger.success(`  ${name} restarted`);
+        successCount++;
+      } else {
+        logger.warn(`  ${name} may not have restarted correctly`);
+        failCount++;
+      }
+    } catch (error) {
+      logger.error(`  ${name} failed: ${error instanceof Error ? error.message : "Unknown error"}`);
+      failCount++;
+    }
+  }
+
+  console.log("");
+
+  if (failCount === 0) {
+    logger.success(`All ${successCount} service(s) restarted successfully`);
+  } else {
+    logger.warn(`Restarted ${successCount}/${apps.length} services (${failCount} failed)`);
+  }
+}
+
+/**
+ * Restart multiple specific services
+ */
+async function restartMultipleServices(ctx: CommandContext, serviceNames: string[]): Promise<void> {
+  const serviceManager = getServiceManager();
+
+  // Validate all service names first
+  const invalidServices = serviceNames.filter(name => !ctx.config!.apps[name]);
+  if (invalidServices.length > 0) {
+    throw new ServiceNotFoundError(
+      invalidServices[0],
+      Object.keys(ctx.config!.apps)
+    );
+  }
+
+  logger.info(`Restarting ${serviceNames.length} service(s)...`);
+  console.log("");
+
+  let successCount = 0;
+  let failCount = 0;
+
+  for (const name of serviceNames) {
+    const app = ctx.config!.apps[name];
+    try {
+      logger.step(`Restarting ${name}...`);
+
+      // Reinstall to pick up config changes
+      await serviceManager.install(app.serviceName, app);
+
+      // Restart the service
+      await serviceManager.restart(app.serviceName);
+
+      // Verify
+      const status = await serviceManager.getStatus(app.serviceName);
+
+      if (status.state === "active" || status.state === "activating") {
+        logger.success(`  ${name} restarted`);
+        successCount++;
+      } else {
+        logger.warn(`  ${name} may not have restarted correctly`);
+        failCount++;
+      }
+    } catch (error) {
+      logger.error(`  ${name} failed: ${error instanceof Error ? error.message : "Unknown error"}`);
+      failCount++;
+    }
+  }
+
+  console.log("");
+
+  if (failCount === 0) {
+    logger.success(`All ${successCount} service(s) restarted successfully`);
+  } else {
+    logger.warn(`Restarted ${successCount}/${serviceNames.length} services (${failCount} failed)`);
   }
 }

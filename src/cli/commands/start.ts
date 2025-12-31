@@ -2,27 +2,14 @@ import type { CommandContext } from "../../types/cli";
 import { logger } from "../../utils/logger";
 import { CommandError, ServiceNotFoundError } from "../../utils/errors";
 import { getOutputMode, formatAppConfigJson } from "../../utils/output";
-import {
-  generateUnitFile,
-  SystemdController,
-  getUnitFilePath,
-  ensureUnitDirectory,
-} from "../../core/systemd";
+import { getServiceManager } from "../../core/backend";
 import { getBooleanOption } from "../parser";
 
 /**
- * Start a service
+ * Start one or more services
  */
 export async function startCommand(ctx: CommandContext): Promise<void> {
-  // Validate service name argument
-  const serviceName = ctx.args.args[0];
-
-  if (!serviceName) {
-    throw new CommandError(
-      "Service name required",
-      "Usage: bunman start <service>"
-    );
-  }
+  const serviceNames = ctx.args.args;
 
   // Config should be loaded by CLI entry
   if (!ctx.config) {
@@ -32,7 +19,20 @@ export async function startCommand(ctx: CommandContext): Promise<void> {
     );
   }
 
-  // Find the app config
+  // If no service names provided, start all services
+  if (serviceNames.length === 0) {
+    await startAllServices(ctx);
+    return;
+  }
+
+  // If multiple service names provided, start them all
+  if (serviceNames.length > 1) {
+    await startMultipleServices(ctx, serviceNames);
+    return;
+  }
+
+  // Single service - use existing logic
+  const serviceName = serviceNames[0];
   const app = ctx.config.apps[serviceName];
 
   if (!app) {
@@ -42,60 +42,38 @@ export async function startCommand(ctx: CommandContext): Promise<void> {
     );
   }
 
-  const userMode = ctx.config.systemd?.userMode ?? false;
   const dryRun = getBooleanOption(ctx.args.options, "dry-run");
   const outputMode = getOutputMode(ctx.args.options);
 
-  // Generate unit file content
-  const unitContent = generateUnitFile(app);
-  const unitPath = getUnitFilePath(app.serviceName, userMode);
+  const serviceManager = getServiceManager();
 
   // Handle dry-run mode
   if (dryRun) {
+    const configContent = serviceManager.generateConfig(app.serviceName, app);
     if (outputMode === "json") {
       console.log(JSON.stringify({
         dryRun: true,
         command: "start",
         service: formatAppConfigJson(serviceName, app),
-        unitPath,
-        unitContent,
+        backend: serviceManager.getName(),
+        configContent,
       }, null, 2));
     } else {
       logger.info(`[DRY-RUN] Would start service: ${serviceName}`);
-      logger.dim(`  Unit path: ${unitPath}`);
+      logger.dim(`  Backend: ${serviceManager.getName()}`);
       console.log("");
-      logger.bold("Generated unit file:");
-      console.log(logger.color.dim(unitContent));
+      logger.bold("Generated configuration:");
+      console.log(logger.color.dim(configContent));
     }
     return;
   }
 
-  const controller = new SystemdController(userMode);
-
-  // Step 1: Generate unit file
-  logger.step(`Generating systemd unit for ${app.serviceName}...`);
-
-  // Ensure directory exists (for user mode)
-  await ensureUnitDirectory(userMode);
-
-  // Write unit file
-  await Bun.write(unitPath, unitContent);
-  logger.dim(`  → ${unitPath}`);
-
-  // Step 2: Reload systemd daemon
-  logger.step("Reloading systemd daemon...");
-  await controller.daemonReload();
-
-  // Step 3: Enable service
-  logger.step(`Enabling ${app.serviceName}...`);
-  await controller.enable(app.serviceName);
-
-  // Step 4: Start service
-  logger.step(`Starting ${app.serviceName}...`);
-  await controller.start(app.serviceName);
+  // Step 1: Initialize service manager
+  logger.step(`Installing ${app.serviceName} on ${serviceManager.getName()}...`);
+  await serviceManager.install(app.serviceName, app);
 
   // Verify service started
-  const status = await controller.getStatus(app.serviceName);
+  const status = await serviceManager.getStatus(app.serviceName);
 
   if (outputMode === "json") {
     console.log(JSON.stringify({
@@ -120,5 +98,110 @@ export async function startCommand(ctx: CommandContext): Promise<void> {
     logger.warn(`Service ${serviceName} may not have started correctly`);
     logger.dim(`  State: ${status.state}`);
     logger.dim("  Check logs with: bunman logs " + serviceName);
+  }
+}
+
+/**
+ * Start all services
+ */
+async function startAllServices(ctx: CommandContext): Promise<void> {
+  const apps = Object.entries(ctx.config!.apps);
+
+  if (apps.length === 0) {
+    logger.warn("No services defined in config");
+    return;
+  }
+
+  const serviceManager = getServiceManager();
+
+  logger.info(`Starting ${apps.length} service(s)...`);
+  console.log("");
+
+  let successCount = 0;
+  let failCount = 0;
+
+  for (const [name, app] of apps) {
+    try {
+      logger.step(`Starting ${name}...`);
+
+      // Install and start the service
+      await serviceManager.install(app.serviceName, app);
+
+      // Verify
+      const status = await serviceManager.getStatus(app.serviceName);
+
+      if (status.state === "active" || status.state === "activating") {
+        logger.success(`  ${name} started`);
+        successCount++;
+      } else {
+        logger.warn(`  ${name} may not have started correctly`);
+        failCount++;
+      }
+    } catch (error) {
+      logger.error(`  ${name} failed: ${error instanceof Error ? error.message : "Unknown error"}`);
+      failCount++;
+    }
+  }
+
+  console.log("");
+
+  if (failCount === 0) {
+    logger.success(`All ${successCount} service(s) started successfully`);
+  } else {
+    logger.warn(`Started ${successCount}/${apps.length} services (${failCount} failed)`);
+  }
+}
+
+/**
+ * Start multiple specific services
+ */
+async function startMultipleServices(ctx: CommandContext, serviceNames: string[]): Promise<void> {
+  const serviceManager = getServiceManager();
+
+  // Validate all service names first
+  const invalidServices = serviceNames.filter(name => !ctx.config!.apps[name]);
+  if (invalidServices.length > 0) {
+    throw new ServiceNotFoundError(
+      invalidServices[0],
+      Object.keys(ctx.config!.apps)
+    );
+  }
+
+  logger.info(`Starting ${serviceNames.length} service(s)...`);
+  console.log("");
+
+  let successCount = 0;
+  let failCount = 0;
+
+  for (const name of serviceNames) {
+    const app = ctx.config!.apps[name];
+    try {
+      logger.step(`Starting ${name}...`);
+
+      // Install and start the service
+      await serviceManager.install(app.serviceName, app);
+
+      // Verify
+      const status = await serviceManager.getStatus(app.serviceName);
+
+      if (status.state === "active" || status.state === "activating") {
+        logger.success(`  ${name} started`);
+        successCount++;
+      } else {
+        logger.warn(`  ${name} may not have started correctly`);
+        failCount++;
+      }
+    } catch (error) {
+      logger.error(`  ${name} failed: ${error instanceof Error ? error.message : "Unknown error"}`);
+      failCount++;
+    }
+  }
+
+  console.log("");
+
+  if (failCount === 0) {
+    logger.success(`All ${successCount} service(s) started successfully`);
+  } else {
+    logger.warn(`Started ${successCount}/${serviceNames.length} services (${failCount} failed)`);
   }
 }

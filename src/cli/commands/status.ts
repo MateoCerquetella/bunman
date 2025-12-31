@@ -3,7 +3,7 @@ import { logger } from "../../utils/logger";
 import { CommandError, ServiceNotFoundError } from "../../utils/errors";
 import { formatStatusTable, formatServiceDetail } from "../../utils/format";
 import { getOutputMode, formatStatusJson } from "../../utils/output";
-import { SystemdController } from "../../core/systemd";
+import { getServiceManager } from "../../core/backend";
 
 /**
  * Show status of all services
@@ -17,8 +17,7 @@ export async function statusCommand(ctx: CommandContext): Promise<void> {
     );
   }
 
-  const userMode = ctx.config.systemd?.userMode ?? false;
-  const controller = new SystemdController(userMode);
+  const serviceManager = getServiceManager();
   const outputMode = getOutputMode(ctx.args.options);
 
   // Check if a specific service was requested
@@ -35,7 +34,7 @@ export async function statusCommand(ctx: CommandContext): Promise<void> {
       );
     }
 
-    const status = await controller.getStatus(app.serviceName);
+    const status = await serviceManager.getStatus(app.serviceName);
 
     // Update name to show user-friendly name
     status.name = specificService;
@@ -62,7 +61,7 @@ export async function statusCommand(ctx: CommandContext): Promise<void> {
 
     // Get status for all services
     const serviceNames = apps.map(([_, app]) => app.serviceName);
-    const statuses = await controller.getAllStatuses(serviceNames);
+    const statuses = await serviceManager.getAllStatuses(serviceNames);
 
     // Map back to user-friendly names
     for (let i = 0; i < statuses.length; i++) {

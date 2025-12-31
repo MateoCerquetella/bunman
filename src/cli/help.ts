@@ -15,19 +15,16 @@ ${color.bold("USAGE")}
   ${NAME} ${color.cyan("<command>")} ${color.dim("[options]")}
 
 ${color.bold("COMMANDS")}
-  ${color.cyan("init")}              Create a new bunman.config.ts file
-  ${color.cyan("start")} <service>   Start a service
-  ${color.cyan("stop")} <service>    Stop a service
-  ${color.cyan("restart")} <service> Restart a service
-  ${color.cyan("remove")} <service>  Remove a service (stop, disable, delete)
-  ${color.cyan("logs")} <service>    View service logs
-  ${color.cyan("status")}            Show status of all services
-  ${color.cyan("startall")}          Start all services
-  ${color.cyan("stopall")}           Stop all services
-  ${color.cyan("restartall")}        Restart all services
-  ${color.cyan("doctor")}            Check system requirements
-  ${color.cyan("help")}              Show this help message
-  ${color.cyan("version")}           Show version number
+  ${color.cyan("init")}                 Create a new bunman.config.ts file
+  ${color.cyan("start")} [service]      Start a service or all services
+  ${color.cyan("stop")} [service]       Stop a service or all services
+  ${color.cyan("restart")} [service]    Restart a service or all services
+  ${color.cyan("remove")} <service>     Remove a service (stop, disable, delete)
+  ${color.cyan("logs")} [service]       View logs for a service or all services
+  ${color.cyan("status")}               Show status of all services
+  ${color.cyan("doctor")}               Check system requirements
+  ${color.cyan("help")}                 Show this help message
+  ${color.cyan("version")}              Show version number
 
 ${color.bold("OPTIONS")}
   ${color.dim("-h, --help")}     Show help
@@ -37,14 +34,23 @@ ${color.bold("EXAMPLES")}
   ${color.dim("# Initialize configuration")}
   ${NAME} init
 
-  ${color.dim("# Start the api service")}
+  ${color.dim("# Start a specific service")}
   ${NAME} start api
 
-  ${color.dim("# View logs (follow mode)")}
+  ${color.dim("# Start all services")}
+  ${NAME} start
+
+  ${color.dim("# View all logs (follow mode)")}
+  ${NAME} logs -f
+
+  ${color.dim("# View specific service logs")}
   ${NAME} logs api -f
 
   ${color.dim("# Check all services")}
   ${NAME} status
+
+  ${color.dim("# Stop all services")}
+  ${NAME} stop
 
 ${color.bold("DOCUMENTATION")}
   ${color.dim("https://github.com/your-username/bunman")}
@@ -79,55 +85,73 @@ ${color.bold("EXAMPLES")}
 
     case "start":
       console.log(`
-${color.bold("bunman start <service>")}
-Start a service defined in bunman.config.ts.
+${color.bold("bunman start [service]")}
+Start a service or all services defined in bunman.config.ts.
 
 ${color.bold("USAGE")}
-  bunman start <service>
+  bunman start [service]
 
 ${color.bold("DESCRIPTION")}
-  Generates a systemd unit file for the service, reloads systemd,
-  enables the service to start on boot, and starts it.
+  Generates systemd unit files, reloads systemd, enables services
+  to start on boot, and starts them.
+
+  If no service name is provided, starts all services.
 
 ${color.bold("EXAMPLES")}
-  bunman start api
+  bunman start          ${color.dim("# Start all services")}
+  bunman start api      ${color.dim("# Start a specific service")}
   bunman start worker
 `);
       break;
 
     case "stop":
       console.log(`
-${color.bold("bunman stop <service>")}
-Stop a running service.
+${color.bold("bunman stop [service]")}
+Stop a running service or all services.
 
 ${color.bold("USAGE")}
-  bunman stop <service>
+  bunman stop [service]
+
+${color.bold("DESCRIPTION")}
+  If no service name is provided, stops all running services.
 
 ${color.bold("EXAMPLES")}
-  bunman stop api
+  bunman stop           ${color.dim("# Stop all services")}
+  bunman stop api       ${color.dim("# Stop a specific service")}
 `);
       break;
 
     case "restart":
       console.log(`
-${color.bold("bunman restart <service>")}
-Restart a service.
+${color.bold("bunman restart [service]")}
+Restart a service or all services.
 
 ${color.bold("USAGE")}
-  bunman restart <service>
+  bunman restart [service]
+
+${color.bold("DESCRIPTION")}
+  Updates unit files and restarts services.
+  Useful after configuration changes.
+
+  If no service name is provided, restarts all services.
 
 ${color.bold("EXAMPLES")}
-  bunman restart api
+  bunman restart        ${color.dim("# Restart all services")}
+  bunman restart api    ${color.dim("# Restart a specific service")}
 `);
       break;
 
     case "logs":
       console.log(`
-${color.bold("bunman logs <service>")}
-View logs for a service from journalctl.
+${color.bold("bunman logs [service]")}
+View logs for a service or all services.
 
 ${color.bold("USAGE")}
-  bunman logs <service> ${color.dim("[options]")}
+  bunman logs [service] ${color.dim("[options]")}
+
+${color.bold("DESCRIPTION")}
+  If no service name is provided, shows logs for all services
+  with color-coded prefixes.
 
 ${color.bold("OPTIONS")}
   ${color.dim("-f, --follow")}     Follow log output (stream)
@@ -135,12 +159,15 @@ ${color.bold("OPTIONS")}
   ${color.dim("--since")} <time>   Show logs since timestamp
   ${color.dim("--until")} <time>   Show logs until timestamp
   ${color.dim("-r, --reverse")}    Show newest entries first
+  ${color.dim("--clear")}          Clear log files
 
 ${color.bold("EXAMPLES")}
   bunman logs api
   bunman logs api -f
   bunman logs api -n 100
   bunman logs api --since "1 hour ago"
+  bunman logs --clear             ${color.dim("# Clear all logs")}
+  bunman logs gateway --clear     ${color.dim("# Clear logs for specific service")}
 `);
       break;
 
@@ -198,47 +225,6 @@ ${color.bold("DESCRIPTION")}
   - systemd directory permissions
   - Configuration file
   - journalctl availability
-`);
-      break;
-
-    case "startall":
-      console.log(`
-${color.bold("bunman startall")}
-Start all services defined in bunman.config.ts.
-
-${color.bold("USAGE")}
-  bunman startall
-
-${color.bold("DESCRIPTION")}
-  Generates unit files, enables, and starts all services.
-`);
-      break;
-
-    case "stopall":
-      console.log(`
-${color.bold("bunman stopall")}
-Stop all running services.
-
-${color.bold("USAGE")}
-  bunman stopall
-
-${color.bold("DESCRIPTION")}
-  Stops all services defined in the configuration.
-  Services that are already stopped are skipped.
-`);
-      break;
-
-    case "restartall":
-      console.log(`
-${color.bold("bunman restartall")}
-Restart all services.
-
-${color.bold("USAGE")}
-  bunman restartall
-
-${color.bold("DESCRIPTION")}
-  Updates unit files and restarts all services.
-  Useful after configuration changes.
 `);
       break;
 

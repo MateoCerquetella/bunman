@@ -1,8 +1,8 @@
 import type { CommandContext } from "../../types/cli";
 import { logger } from "../../utils/logger";
-import { isRoot, isSystemdAvailable } from "../../utils/permissions";
+import { isRoot } from "../../utils/permissions";
 import { configExists } from "../../core/config";
-import { SYSTEMD_PATHS } from "../../constants";
+import { getServiceManager, getPlatformName } from "../../core/backend";
 
 interface CheckResult {
   name: string;
@@ -20,23 +20,20 @@ export async function doctorCommand(ctx: CommandContext): Promise<void> {
 
   const checks: CheckResult[] = [];
 
-  // Check 1: Bun version
+  // Check 1: Platform support
+  checks.push(checkPlatform());
+
+  // Check 2: Bun version
   checks.push(await checkBun());
 
-  // Check 2: systemd availability
-  checks.push(await checkSystemd());
+  // Check 3: Service manager availability
+  checks.push(await checkServiceManager());
 
-  // Check 3: Root/sudo access
+  // Check 4: Root/sudo access (if needed)
   checks.push(checkRootAccess());
-
-  // Check 4: systemd directory permissions
-  checks.push(await checkSystemdDirectory());
 
   // Check 5: Config file
   checks.push(await checkConfig(ctx.cwd));
-
-  // Check 6: journalctl availability
-  checks.push(await checkJournalctl());
 
   // Display results
   console.log("");
@@ -105,101 +102,116 @@ async function checkBun(): Promise<CheckResult> {
   }
 }
 
-async function checkSystemd(): Promise<CheckResult> {
-  const available = await isSystemdAvailable();
+function checkPlatform(): CheckResult {
+  const platform = getPlatformName();
+  const supported = process.platform === "linux" || process.platform === "darwin";
 
-  if (available) {
-    // Get systemd version
-    try {
-      const proc = Bun.spawn(["systemctl", "--version"], {
-        stdout: "pipe",
-        stderr: "pipe",
-      });
-
-      const stdout = await new Response(proc.stdout).text();
-      const versionMatch = stdout.match(/systemd (\d+)/);
-      const version = versionMatch?.[1] ?? "unknown";
-
-      return {
-        name: "systemd",
-        status: "ok",
-        message: `systemd ${version} available`,
-      };
-    } catch {
-      return {
-        name: "systemd",
-        status: "ok",
-        message: "systemd available",
-      };
-    }
+  if (supported) {
+    return {
+      name: "Platform",
+      status: "ok",
+      message: `${platform} is supported`,
+    };
   }
 
   return {
-    name: "systemd",
+    name: "Platform",
     status: "error",
-    message: "systemd not available",
-    help: "bunman requires Linux with systemd",
+    message: `${platform} is not supported`,
+    help: "bunman currently supports Linux and macOS",
   };
 }
 
+async function checkServiceManager(): Promise<CheckResult> {
+  try {
+    const serviceManager = getServiceManager();
+    const available = await serviceManager.isAvailable();
+
+    if (available) {
+      // Get version info
+      const name = serviceManager.getName();
+      
+      if (name === "systemd") {
+        try {
+          const proc = Bun.spawn(["systemctl", "--version"], {
+            stdout: "pipe",
+            stderr: "pipe",
+          });
+
+          const stdout = await new Response(proc.stdout).text();
+          const versionMatch = stdout.match(/systemd (\d+)/);
+          const version = versionMatch?.[1] ?? "unknown";
+
+          return {
+            name: "Service Manager",
+            status: "ok",
+            message: `systemd ${version} available`,
+          };
+        } catch {
+          return {
+            name: "Service Manager",
+            status: "ok",
+            message: "systemd available",
+          };
+        }
+      } else if (name === "launchd") {
+        return {
+          name: "Service Manager",
+          status: "ok",
+          message: "launchd available",
+        };
+      }
+
+      return {
+        name: "Service Manager",
+        status: "ok",
+        message: `${name} available`,
+      };
+    }
+
+    return {
+      name: "Service Manager",
+      status: "error",
+      message: `${serviceManager.getName()} not available`,
+      help: `bunman requires ${serviceManager.getName()} on ${getPlatformName()}`,
+    };
+  } catch (error) {
+    return {
+      name: "Service Manager",
+      status: "error",
+      message: "Could not detect service manager",
+      help: error instanceof Error ? error.message : "Unknown error",
+    };
+  }
+}
+
 function checkRootAccess(): CheckResult {
+  const platform = process.platform;
   const hasRoot = isRoot();
+
+  if (platform === "darwin") {
+    // macOS uses user-level LaunchAgents by default
+    return {
+      name: "Permissions",
+      status: "ok",
+      message: "Running in user mode (macOS default)",
+    };
+  }
 
   if (hasRoot) {
     return {
-      name: "Root access",
+      name: "Permissions",
       status: "ok",
       message: "Running as root",
     };
   }
 
   return {
-    name: "Root access",
+    name: "Permissions",
     status: "warn",
     message: "Not running as root",
-    help: "Run with sudo for system-level services, or use userMode: true",
+    help: "Run with sudo for system-level services, or use userMode: true in config",
   };
-}
-
-async function checkSystemdDirectory(): Promise<CheckResult> {
-  const systemDir = SYSTEMD_PATHS.system;
-
-  try {
-    const dir = Bun.file(systemDir);
-    const exists = await dir.exists();
-
-    if (exists) {
-      // Try to check if writable (rough check)
-      if (isRoot()) {
-        return {
-          name: "systemd directory",
-          status: "ok",
-          message: `${systemDir} is accessible`,
-        };
-      }
-
-      return {
-        name: "systemd directory",
-        status: "warn",
-        message: `${systemDir} exists but may not be writable`,
-        help: "Run with sudo or use userMode: true in config",
-      };
-    }
-
-    return {
-      name: "systemd directory",
-      status: "error",
-      message: `${systemDir} does not exist`,
-      help: "Ensure systemd is properly installed",
-    };
-  } catch {
-    return {
-      name: "systemd directory",
-      status: "warn",
-      message: `Cannot check ${systemDir}`,
-      help: "Run with sudo to check system directories",
-    };
-  }
 }
 
 async function checkConfig(cwd: string): Promise<CheckResult> {
@@ -221,34 +233,3 @@ async function checkConfig(cwd: string): Promise<CheckResult> {
   };
 }
 
-async function checkJournalctl(): Promise<CheckResult> {
-  try {
-    const proc = Bun.spawn(["which", "journalctl"], {
-      stdout: "pipe",
-      stderr: "pipe",
-    });
-
-    const exitCode = await proc.exited;
-
-    if (exitCode === 0) {
-      return {
-        name: "journalctl",
-        status: "ok",
-        message: "journalctl available for log viewing",
-      };
-    }
-
-    return {
-      name: "journalctl",
-      status: "warn",
-      message: "journalctl not found",
-      help: "Log viewing may not work without journalctl",
-    };
-  } catch {
-    return {
-      name: "journalctl",
-      status: "warn",
-      message: "Could not check for journalctl",
-    };
-  }
-}
