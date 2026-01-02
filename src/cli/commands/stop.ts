@@ -1,7 +1,9 @@
 import type { CommandContext } from "../../types/cli";
+import type { NormalizedAppConfig } from "../../types/config";
 import { logger } from "../../utils/logger";
 import { CommandError, ServiceNotFoundError } from "../../utils/errors";
 import { getServiceManager } from "../../core/backend";
+import { executeBatch, validateServiceNames } from "../../core/batch";
 
 /**
  * Stop one or more services
@@ -29,8 +31,8 @@ export async function stopCommand(ctx: CommandContext): Promise<void> {
     return;
   }
 
-  // Single service - use existing logic
-  const serviceName = serviceNames[0];
+  // Single service - use detailed output
+  const serviceName = serviceNames[0]!;
   const app = ctx.config.apps[serviceName];
 
   if (!app) {
@@ -80,118 +82,48 @@ async function stopAllServices(ctx: CommandContext): Promise<void> {
 
   const serviceManager = getServiceManager();
 
-  logger.info(`Stopping ${apps.length} service(s)...`);
-  console.log("");
-
-  let successCount = 0;
-  let skippedCount = 0;
-  let failCount = 0;
-
-  for (const [name, app] of apps) {
-    try {
-      // Check if service is running
-      const isActive = await serviceManager.isActive(app.serviceName);
-
-      if (!isActive) {
-        logger.dim(`  ${name} already stopped`);
-        skippedCount++;
-        continue;
-      }
-
-      logger.step(`Stopping ${name}...`);
-      await serviceManager.stop(app.serviceName);
-
-      // Verify
-      const status = await serviceManager.getStatus(app.serviceName);
-
-      if (status.state === "inactive" || status.state === "deactivating") {
-        logger.success(`  ${name} stopped`);
-        successCount++;
-      } else {
-        logger.warn(`  ${name} may not have stopped correctly`);
-        failCount++;
-      }
-    } catch (error) {
-      logger.error(`  ${name} failed: ${error instanceof Error ? error.message : "Unknown error"}`);
-      failCount++;
+  await executeBatch(
+    apps as Array<[string, NormalizedAppConfig]>,
+    serviceManager,
+    {
+      presentVerb: "Stopping",
+      pastVerb: "stopped",
+      execute: async (_name, app, sm) => {
+        await sm.stop(app.serviceName);
+      },
+      shouldSkip: async (_name, app, sm) => {
+        return !(await sm.isActive(app.serviceName));
+      },
+      skipMessage: "already stopped",
+      successStates: ["inactive", "deactivating"],
     }
-  }
-
-  console.log("");
-
-  if (failCount === 0) {
-    if (skippedCount === apps.length) {
-      logger.info("All services were already stopped");
-    } else {
-      logger.success(`Stopped ${successCount} service(s)`);
-    }
-  } else {
-    logger.warn(`Stopped ${successCount}/${apps.length - skippedCount} services (${failCount} failed)`);
-  }
+  );
 }
 
 /**
  * Stop multiple specific services
  */
-async function stopMultipleServices(ctx: CommandContext, serviceNames: string[]): Promise<void> {
+async function stopMultipleServices(
+  ctx: CommandContext,
+  serviceNames: string[]
+): Promise<void> {
+  validateServiceNames(serviceNames, ctx.config!.apps);
+
+  const apps = serviceNames.map(
+    (name) => [name, ctx.config!.apps[name]] as [string, NormalizedAppConfig]
+  );
   const serviceManager = getServiceManager();
 
-  // Validate all service names first
-  const invalidServices = serviceNames.filter(name => !ctx.config!.apps[name]);
-  if (invalidServices.length > 0) {
-    throw new ServiceNotFoundError(
-      invalidServices[0],
-      Object.keys(ctx.config!.apps)
-    );
-  }
-
-  logger.info(`Stopping ${serviceNames.length} service(s)...`);
-  console.log("");
-
-  let successCount = 0;
-  let skippedCount = 0;
-  let failCount = 0;
-
-  for (const name of serviceNames) {
-    const app = ctx.config!.apps[name];
-    try {
-      // Check if service is running
-      const isActive = await serviceManager.isActive(app.serviceName);
-
-      if (!isActive) {
-        logger.dim(`  ${name} already stopped`);
-        skippedCount++;
-        continue;
-      }
-
-      logger.step(`Stopping ${name}...`);
-      await serviceManager.stop(app.serviceName);
-
-      // Verify
-      const status = await serviceManager.getStatus(app.serviceName);
-
-      if (status.state === "inactive" || status.state === "deactivating") {
-        logger.success(`  ${name} stopped`);
-        successCount++;
-      } else {
-        logger.warn(`  ${name} may not have stopped correctly`);
-        failCount++;
-      }
-    } catch (error) {
-      logger.error(`  ${name} failed: ${error instanceof Error ? error.message : "Unknown error"}`);
-      failCount++;
-    }
-  }
-
-  console.log("");
-
-  if (failCount === 0) {
-    if (skippedCount === serviceNames.length) {
-      logger.info("All specified services were already stopped");
-    } else {
-      logger.success(`Stopped ${successCount} service(s)`);
-    }
-  } else {
-    logger.warn(`Stopped ${successCount}/${serviceNames.length - skippedCount} services (${failCount} failed)`);
-  }
+  await executeBatch(apps, serviceManager, {
+    presentVerb: "Stopping",
+    pastVerb: "stopped",
+    execute: async (_name, app, sm) => {
+      await sm.stop(app.serviceName);
+    },
+    shouldSkip: async (_name, app, sm) => {
+      return !(await sm.isActive(app.serviceName));
+    },
+    skipMessage: "already stopped",
+    successStates: ["inactive", "deactivating"],
+  });
 }

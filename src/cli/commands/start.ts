@@ -1,8 +1,10 @@
 import type { CommandContext } from "../../types/cli";
+import type { NormalizedAppConfig } from "../../types/config";
 import { logger } from "../../utils/logger";
 import { CommandError, ServiceNotFoundError } from "../../utils/errors";
 import { getOutputMode, formatAppConfigJson } from "../../utils/output";
 import { getServiceManager } from "../../core/backend";
+import { executeBatch, validateServiceNames } from "../../core/batch";
 import { getBooleanOption } from "../parser";
 
 /**
@@ -31,8 +33,8 @@ export async function startCommand(ctx: CommandContext): Promise<void> {
     return;
   }
 
-  // Single service - use existing logic
-  const serviceName = serviceNames[0];
+  // Single service - use detailed output
+  const serviceName = serviceNames[0]!;
   const app = ctx.config.apps[serviceName];
 
   if (!app) {
@@ -114,94 +116,40 @@ async function startAllServices(ctx: CommandContext): Promise<void> {
 
   const serviceManager = getServiceManager();
 
-  logger.info(`Starting ${apps.length} service(s)...`);
-  console.log("");
-
-  let successCount = 0;
-  let failCount = 0;
-
-  for (const [name, app] of apps) {
-    try {
-      logger.step(`Starting ${name}...`);
-
-      // Install and start the service
-      await serviceManager.install(app.serviceName, app);
-
-      // Verify
-      const status = await serviceManager.getStatus(app.serviceName);
-
-      if (status.state === "active" || status.state === "activating") {
-        logger.success(`  ${name} started`);
-        successCount++;
-      } else {
-        logger.warn(`  ${name} may not have started correctly`);
-        failCount++;
-      }
-    } catch (error) {
-      logger.error(`  ${name} failed: ${error instanceof Error ? error.message : "Unknown error"}`);
-      failCount++;
+  await executeBatch(
+    apps as Array<[string, NormalizedAppConfig]>,
+    serviceManager,
+    {
+      presentVerb: "Starting",
+      pastVerb: "started",
+      execute: async (_name, app, sm) => {
+        await sm.install(app.serviceName, app);
+      },
+      successStates: ["active", "activating"],
     }
-  }
-
-  console.log("");
-
-  if (failCount === 0) {
-    logger.success(`All ${successCount} service(s) started successfully`);
-  } else {
-    logger.warn(`Started ${successCount}/${apps.length} services (${failCount} failed)`);
-  }
+  );
 }
 
 /**
  * Start multiple specific services
  */
-async function startMultipleServices(ctx: CommandContext, serviceNames: string[]): Promise<void> {
+async function startMultipleServices(
+  ctx: CommandContext,
+  serviceNames: string[]
+): Promise<void> {
+  validateServiceNames(serviceNames, ctx.config!.apps);
+
+  const apps = serviceNames.map(
+    (name) => [name, ctx.config!.apps[name]] as [string, NormalizedAppConfig]
+  );
   const serviceManager = getServiceManager();
 
-  // Validate all service names first
-  const invalidServices = serviceNames.filter(name => !ctx.config!.apps[name]);
-  if (invalidServices.length > 0) {
-    throw new ServiceNotFoundError(
-      invalidServices[0],
-      Object.keys(ctx.config!.apps)
-    );
-  }
-
-  logger.info(`Starting ${serviceNames.length} service(s)...`);
-  console.log("");
-
-  let successCount = 0;
-  let failCount = 0;
-
-  for (const name of serviceNames) {
-    const app = ctx.config!.apps[name];
-    try {
-      logger.step(`Starting ${name}...`);
-
-      // Install and start the service
-      await serviceManager.install(app.serviceName, app);
-
-      // Verify
-      const status = await serviceManager.getStatus(app.serviceName);
-
-      if (status.state === "active" || status.state === "activating") {
-        logger.success(`  ${name} started`);
-        successCount++;
-      } else {
-        logger.warn(`  ${name} may not have started correctly`);
-        failCount++;
-      }
-    } catch (error) {
-      logger.error(`  ${name} failed: ${error instanceof Error ? error.message : "Unknown error"}`);
-      failCount++;
-    }
-  }
-
-  console.log("");
-
-  if (failCount === 0) {
-    logger.success(`All ${successCount} service(s) started successfully`);
-  } else {
-    logger.warn(`Started ${successCount}/${serviceNames.length} services (${failCount} failed)`);
-  }
+  await executeBatch(apps, serviceManager, {
+    presentVerb: "Starting",
+    pastVerb: "started",
+    execute: async (_name, app, sm) => {
+      await sm.install(app.serviceName, app);
+    },
+    successStates: ["active", "activating"],
+  });
 }

@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 
-import type { CommandContext } from '../types/cli';
+import type { CommandContext, CommandName } from '../types/cli';
 import { parseArgs } from './parser';
 import { printHelp, printVersion, printCommandHelp } from './help';
 import {
@@ -21,7 +21,7 @@ import { getServiceManager, getPlatformName } from '../core/backend';
 /**
  * Commands that require a config file
  */
-const COMMANDS_REQUIRING_CONFIG = new Set([
+const COMMANDS_REQUIRING_CONFIG: ReadonlySet<CommandName> = new Set<CommandName>([
     'start',
     'stop',
     'restart',
@@ -31,7 +31,7 @@ const COMMANDS_REQUIRING_CONFIG = new Set([
     // Backward compatibility aliases
     'startall',
     'stopall',
-    'restartall'
+    'restartall',
 ]);
 
 /**
@@ -107,15 +107,12 @@ async function main(): Promise<void> {
                 await initCommand(ctx);
                 break;
             case 'start':
-            case 'startall': // Backward compatibility alias
                 await startCommand(ctx);
                 break;
             case 'stop':
-            case 'stopall': // Backward compatibility alias
                 await stopCommand(ctx);
                 break;
             case 'restart':
-            case 'restartall': // Backward compatibility alias
                 await restartCommand(ctx);
                 break;
             case 'logs':

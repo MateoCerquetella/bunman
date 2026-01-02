@@ -1,7 +1,9 @@
 import type { CommandContext } from "../../types/cli";
+import type { NormalizedAppConfig } from "../../types/config";
 import { logger } from "../../utils/logger";
 import { CommandError, ServiceNotFoundError } from "../../utils/errors";
 import { getServiceManager } from "../../core/backend";
+import { executeBatch, validateServiceNames } from "../../core/batch";
 
 /**
  * Restart one or more services
@@ -29,8 +31,8 @@ export async function restartCommand(ctx: CommandContext): Promise<void> {
     return;
   }
 
-  // Single service - use existing logic
-  const serviceName = serviceNames[0];
+  // Single service - use detailed output
+  const serviceName = serviceNames[0]!;
   const app = ctx.config.apps[serviceName];
 
   if (!app) {
@@ -54,7 +56,7 @@ export async function restartCommand(ctx: CommandContext): Promise<void> {
     // Service exists, reinstall to pick up config changes and restart
     logger.step(`Updating ${app.serviceName}...`);
     await serviceManager.install(app.serviceName, app);
-    
+
     // Restart the service
     logger.step(`Restarting ${app.serviceName}...`);
     await serviceManager.restart(app.serviceName);
@@ -91,100 +93,46 @@ async function restartAllServices(ctx: CommandContext): Promise<void> {
 
   const serviceManager = getServiceManager();
 
-  logger.info(`Restarting ${apps.length} service(s)...`);
-  console.log("");
-
-  let successCount = 0;
-  let failCount = 0;
-
-  for (const [name, app] of apps) {
-    try {
-      logger.step(`Restarting ${name}...`);
-
-      // Reinstall to pick up config changes
-      await serviceManager.install(app.serviceName, app);
-
-      // Restart the service
-      await serviceManager.restart(app.serviceName);
-
-      // Verify
-      const status = await serviceManager.getStatus(app.serviceName);
-
-      if (status.state === "active" || status.state === "activating") {
-        logger.success(`  ${name} restarted`);
-        successCount++;
-      } else {
-        logger.warn(`  ${name} may not have restarted correctly`);
-        failCount++;
-      }
-    } catch (error) {
-      logger.error(`  ${name} failed: ${error instanceof Error ? error.message : "Unknown error"}`);
-      failCount++;
+  await executeBatch(
+    apps as Array<[string, NormalizedAppConfig]>,
+    serviceManager,
+    {
+      presentVerb: "Restarting",
+      pastVerb: "restarted",
+      execute: async (_name, app, sm) => {
+        // Reinstall to pick up config changes
+        await sm.install(app.serviceName, app);
+        // Restart the service
+        await sm.restart(app.serviceName);
+      },
+      successStates: ["active", "activating"],
     }
-  }
-
-  console.log("");
-
-  if (failCount === 0) {
-    logger.success(`All ${successCount} service(s) restarted successfully`);
-  } else {
-    logger.warn(`Restarted ${successCount}/${apps.length} services (${failCount} failed)`);
-  }
+  );
 }
 
 /**
  * Restart multiple specific services
  */
-async function restartMultipleServices(ctx: CommandContext, serviceNames: string[]): Promise<void> {
+async function restartMultipleServices(
+  ctx: CommandContext,
+  serviceNames: string[]
+): Promise<void> {
+  validateServiceNames(serviceNames, ctx.config!.apps);
+
+  const apps = serviceNames.map(
+    (name) => [name, ctx.config!.apps[name]] as [string, NormalizedAppConfig]
+  );
   const serviceManager = getServiceManager();
 
-  // Validate all service names first
-  const invalidServices = serviceNames.filter(name => !ctx.config!.apps[name]);
-  if (invalidServices.length > 0) {
-    throw new ServiceNotFoundError(
-      invalidServices[0],
-      Object.keys(ctx.config!.apps)
-    );
-  }
-
-  logger.info(`Restarting ${serviceNames.length} service(s)...`);
-  console.log("");
-
-  let successCount = 0;
-  let failCount = 0;
-
-  for (const name of serviceNames) {
-    const app = ctx.config!.apps[name];
-    try {
-      logger.step(`Restarting ${name}...`);
-
+  await executeBatch(apps, serviceManager, {
+    presentVerb: "Restarting",
+    pastVerb: "restarted",
+    execute: async (_name, app, sm) => {
       // Reinstall to pick up config changes
-      await serviceManager.install(app.serviceName, app);
-
+      await sm.install(app.serviceName, app);
       // Restart the service
-      await serviceManager.restart(app.serviceName);
-
-      // Verify
-      const status = await serviceManager.getStatus(app.serviceName);
-
-      if (status.state === "active" || status.state === "activating") {
-        logger.success(`  ${name} restarted`);
-        successCount++;
-      } else {
-        logger.warn(`  ${name} may not have restarted correctly`);
-        failCount++;
-      }
-    } catch (error) {
-      logger.error(`  ${name} failed: ${error instanceof Error ? error.message : "Unknown error"}`);
-      failCount++;
-    }
-  }
-
-  console.log("");
-
-  if (failCount === 0) {
-    logger.success(`All ${successCount} service(s) restarted successfully`);
-  } else {
-    logger.warn(`Restarted ${successCount}/${serviceNames.length} services (${failCount} failed)`);
-  }
+      await sm.restart(app.serviceName);
+    },
+    successStates: ["active", "activating"],
+  });
 }

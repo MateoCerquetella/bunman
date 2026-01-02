@@ -1,5 +1,13 @@
 import { VERSION, NAME } from "../constants";
 import { logger } from "../utils/logger";
+import type { CommandName } from "../types/cli";
+
+/**
+ * Helper for exhaustiveness checking
+ */
+function assertNever(value: never): never {
+  throw new Error(`Unhandled command: ${value}`);
+}
 
 /**
  * Print the main help message
@@ -63,7 +71,10 @@ ${color.bold("DOCUMENTATION")}
 export function printCommandHelp(command: string): void {
   const { color } = logger;
 
-  switch (command) {
+  // Cast to CommandName for exhaustiveness checking
+  const cmd = command as CommandName;
+
+  switch (cmd) {
     case "init":
       console.log(`
 ${color.bold("bunman init")}
@@ -228,8 +239,29 @@ ${color.bold("DESCRIPTION")}
 `);
       break;
 
-    default:
+    // Backward compatibility aliases - show the equivalent command help
+    case "startall":
+      printCommandHelp("start");
+      break;
+
+    case "stopall":
+      printCommandHelp("stop");
+      break;
+
+    case "restartall":
+      printCommandHelp("restart");
+      break;
+
+    // These just show main help
+    case "help":
+    case "version":
       printHelp();
+      break;
+
+    default:
+      // Exhaustiveness check - TypeScript will error if we add a new command
+      // but don't handle it here
+      assertNever(cmd);
   }
 }
 

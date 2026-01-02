@@ -11,7 +11,10 @@
     "build": "bun build src/cli/index.ts --outfile=dist/bunman --target=bun --minify",
     "build:standalone": "bun build src/cli/index.ts --outfile=dist/bunman --target=bun --compile",
     "lint": "tsc --noEmit",
-    "format": "prettier --write src/**/*.ts"
+    "format": "prettier --write src/**/*.ts",
+    "test": "bun test",
+    "test:watch": "bun test --watch",
+    "test:coverage": "bun test --coverage"
   },
   "keywords": [
     "bun",
